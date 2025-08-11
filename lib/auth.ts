@@ -5,30 +5,23 @@ import GoogleProvider from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: "/auth/signin",
-  },
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
+// Create providers array conditionally based on environment variables
+const providers: any[] = []
 
+// Always include credentials provider
+providers.push(
+  CredentialsProvider({
+    name: "credentials",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) {
+        return null
+      }
+
+      try {
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email,
@@ -58,9 +51,33 @@ export const authOptions: NextAuthOptions = {
           image: user.image,
           profile: user.profile,
         }
-      },
-    }),
-  ],
+      } catch (error) {
+        console.error("Auth error:", error)
+        return null
+      }
+    },
+  })
+)
+
+// Add Google provider only if credentials are available
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  )
+}
+
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
+  session: {
+    strategy: "jwt",
+  },
+  pages: {
+    signIn: "/auth/signin",
+  },
+  providers,
   callbacks: {
     async session({ token, session }) {
       if (token) {
@@ -75,29 +92,37 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async jwt({ token, user }) {
-      const dbUser = await prisma.user.findFirst({
-        where: {
-          email: token.email!,
-        },
-        include: {
-          profile: true,
-        },
-      })
+      try {
+        const dbUser = await prisma.user.findFirst({
+          where: {
+            email: token.email!,
+          },
+          include: {
+            profile: true,
+          },
+        })
 
-      if (!dbUser) {
+        if (!dbUser) {
+          if (user) {
+            token.id = user?.id
+          }
+          return token
+        }
+
+        return {
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          picture: dbUser.image,
+          profile: dbUser.profile,
+          isAdmin: dbUser.isAdmin,
+        }
+      } catch (error) {
+        console.error("JWT callback error:", error)
         if (user) {
           token.id = user?.id
         }
         return token
-      }
-
-      return {
-        id: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        picture: dbUser.image,
-        profile: dbUser.profile,
-        isAdmin: dbUser.isAdmin,
       }
     },
   },

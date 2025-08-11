@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = env("DATABASE_PROVIDER")
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // NextAuth.js Models
@@ -302,7 +303,35 @@ model ShoppingListItem {
   @@map("shopping_list_items")
 }
 
-// Note: SQLite doesn't support enums, so these are now String fields with default values
+// Enums for PostgreSQL (will be ignored in SQLite)
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHTLY_ACTIVE
+  MODERATELY_ACTIVE
+  VERY_ACTIVE
+  EXTREMELY_ACTIVE
+}
+
+enum Goal {
+  LOSE
+  MAINTAIN
+  GAIN
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+// Note: SQLite will treat enums as String fields
 // Valid values for gender: "MALE", "FEMALE", "OTHER"
 // Valid values for activityLevel: "SEDENTARY", "LIGHTLY_ACTIVE", "MODERATELY_ACTIVE", "VERY_ACTIVE", "EXTREMELY_ACTIVE"
 // Valid values for goal: "LOSE", "MAINTAIN", "GAIN"
