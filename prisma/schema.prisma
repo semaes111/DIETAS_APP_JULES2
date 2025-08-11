@@ -1,0 +1,309 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// NextAuth.js Models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  isAdmin       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // User Profile Information
+  profile       UserProfile?
+  accounts      Account[]
+  sessions      Session[]
+  mealPlans     MealPlan[]
+  progressLogs  ProgressLog[]
+  recipes       Recipe[]
+  shoppingLists ShoppingList[]
+  userMeals     UserMeal[]
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+// User Profile Model
+model UserProfile {
+  id             String           @id @default(cuid())
+  userId         String           @unique
+  age            Int?
+  gender         String?
+  height         Float? // in cm
+  weight         Float? // in kg
+  activityLevel  String    @default("SEDENTARY")
+  goal           String             @default("MAINTAIN")
+  dietaryRestrictions String? // JSON string containing array of dietary restrictions
+  healthConditions    String? // JSON string containing array of health conditions
+  bmr            Float?
+  tdee           Float?
+  targetCalories Int?
+  targetProtein  Int?
+  targetCarbs    Int?
+  targetFat      Int?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// Food Database Models
+model Food {
+  id              String     @id @default(cuid())
+  name            String
+  brand           String?
+  barcode         String?    @unique
+  description     String?
+  category        String
+  servingSize     Float      // in grams
+  caloriesPer100g Float
+  proteinPer100g  Float
+  carbsPer100g    Float
+  fatPer100g      Float
+  fiberPer100g    Float?
+  sugarPer100g    Float?
+  sodiumPer100g   Float?
+  isVerified      Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  mealItems  MealItem[]
+  userMeals  UserMeal[]
+  recipeIngredients RecipeIngredient[]
+
+  @@map("foods")
+}
+
+// Meal Planning Models
+model MealPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meals Meal[]
+
+  @@map("meal_plans")
+}
+
+model Meal {
+  id         String   @id @default(cuid())
+  mealPlanId String
+  date       DateTime
+  type       String
+  name       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  mealPlan  MealPlan   @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  mealItems MealItem[]
+
+  @@map("meals")
+}
+
+model MealItem {
+  id       String @id @default(cuid())
+  mealId   String
+  foodId   String
+  quantity Float  // in grams
+  calories Float
+  protein  Float
+  carbs    Float
+  fat      Float
+
+  meal Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@map("meal_items")
+}
+
+// User Daily Meals (Actual consumed meals)
+model UserMeal {
+  id       String   @id @default(cuid())
+  userId   String
+  foodId   String
+  date     DateTime
+  mealType String
+  quantity Float    // in grams
+  calories Float
+  protein  Float
+  carbs    Float
+  fat      Float
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@map("user_meals")
+}
+
+// Recipe Models
+model Recipe {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  description  String?
+  instructions String
+  servings     Int
+  prepTime     Int?     // in minutes
+  cookTime     Int?     // in minutes
+  difficulty   String?
+  category     String?
+  image        String?
+  isPublic     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+  nutrition   RecipeNutrition?
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id       String @id @default(cuid())
+  recipeId String
+  foodId   String
+  quantity Float  // in grams
+  notes    String?
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@map("recipe_ingredients")
+}
+
+model RecipeNutrition {
+  id            String @id @default(cuid())
+  recipeId      String @unique
+  caloriesTotal Float
+  proteinTotal  Float
+  carbsTotal    Float
+  fatTotal      Float
+  fiberTotal    Float?
+  sugarTotal    Float?
+  sodiumTotal   Float?
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@map("recipe_nutrition")
+}
+
+// Progress Tracking Models
+model ProgressLog {
+  id           String    @id @default(cuid())
+  userId       String
+  date         DateTime
+  weight       Float?    // in kg
+  bodyFat      Float?    // percentage
+  muscleMass   Float?    // in kg
+  waist        Float?    // in cm
+  chest        Float?    // in cm
+  hips         Float?    // in cm
+  notes        String?
+  mood         Int?      // 1-5 scale
+  energyLevel  Int?      // 1-5 scale
+  sleepHours   Float?
+  waterIntake  Float?    // in liters
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("progress_logs")
+}
+
+// Shopping List Models
+model ShoppingList {
+  id        String            @id @default(cuid())
+  userId    String
+  name      String
+  date      DateTime          @default(now())
+  isCompleted Boolean         @default(false)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items ShoppingListItem[]
+
+  @@map("shopping_lists")
+}
+
+model ShoppingListItem {
+  id             String  @id @default(cuid())
+  shoppingListId String
+  name           String
+  category       String?
+  quantity       Float?
+  unit           String?
+  isCompleted    Boolean @default(false)
+  notes          String?
+
+  shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+
+  @@map("shopping_list_items")
+}
+
+// Note: SQLite doesn't support enums, so these are now String fields with default values
+// Valid values for gender: "MALE", "FEMALE", "OTHER"
+// Valid values for activityLevel: "SEDENTARY", "LIGHTLY_ACTIVE", "MODERATELY_ACTIVE", "VERY_ACTIVE", "EXTREMELY_ACTIVE"
+// Valid values for goal: "LOSE", "MAINTAIN", "GAIN"
+// Valid values for mealType: "BREAKFAST", "LUNCH", "DINNER", "SNACK"
