@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
@@ -27,7 +27,7 @@ const profileSchema = z.object({
 export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const { toast } = useToast()
 
@@ -42,6 +42,12 @@ export default function OnboardingPage() {
       goal: "MAINTAIN",
     },
   })
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+    }
+  }, [status, router]);
 
   async function onSubmit(values: z.infer<typeof profileSchema>) {
     setLoading(true)
@@ -102,9 +108,12 @@ export default function OnboardingPage() {
     }
   }
 
-  if (!session) {
-    router.push("/auth/signin")
-    return null
+  if (status === "loading") {
+    return <div className="flex justify-center items-center min-h-screen">Cargando...</div>;
+  }
+
+  if (status === "unauthenticated") {
+    return null; // The useEffect will handle the redirect
   }
 
   const nextStep = () => setStep(step + 1)
