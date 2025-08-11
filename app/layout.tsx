@@ -33,11 +33,12 @@ export const metadata: Metadata = {
     title: "Dietas NutriMed",
     description: "Gestión nutricional personalizada",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
+}
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({

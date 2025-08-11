@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
+export const dynamic = 'force-dynamic'
+
 const profileSchema = z.object({
   age: z.number().min(16).max(120),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),

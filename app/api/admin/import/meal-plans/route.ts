@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 interface MealPlanImportData {
   name: string
   startDate: string
