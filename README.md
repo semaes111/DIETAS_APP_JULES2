@@ -1,4 +1,4 @@
-# 🥗 DIETAS NUTRIMED 
+# 🥗 Nutrimed App
 
 **Aplicación completa de gestión nutricional personalizada basada en principios mediterráneos**
 
@@ -52,8 +52,8 @@
 
 ### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/tu-usuario/dietas-nutrimed.git
-cd dietas-nutrimed
+git clone https://github.com/tu-usuario/nutrimed-app.git
+cd nutrimed-app
 ```
 
 ### 2. Instalar dependencias
@@ -73,7 +73,7 @@ cp .env.example .env.local
 Edita `.env.local` con tus configuraciones:
 ```env
 # Base de datos
-DATABASE_URL="postgresql://username:password@localhost:5432/dietas_nutrimed"
+DATABASE_URL="postgresql://username:password@localhost:5432/nutrimed_app"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
@@ -113,7 +113,7 @@ La aplicación estará disponible en `http://localhost:3000`
 ## 📁 Estructura del Proyecto
 
 ```
-dietas-nutrimed/
+nutrimed-app/
 ├── app/                    # App Router de Next.js
 │   ├── api/               # API Routes
 │   ├── auth/              # Páginas de autenticación
