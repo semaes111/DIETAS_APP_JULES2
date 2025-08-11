@@ -80,11 +80,11 @@ model UserProfile {
   id             String           @id @default(cuid())
   userId         String           @unique
   age            Int?
-  gender         String?
+  gender         Gender?
   height         Float? // in cm
   weight         Float? // in kg
-  activityLevel  String    @default("SEDENTARY")
-  goal           String             @default("MAINTAIN")
+  activityLevel  ActivityLevel    @default(SEDENTARY)
+  goal           Goal             @default(MAINTAIN)
   dietaryRestrictions String? // JSON string containing array of dietary restrictions
   healthConditions    String? // JSON string containing array of health conditions
   bmr            Float?
@@ -182,7 +182,7 @@ model UserMeal {
   userId   String
   foodId   String
   date     DateTime
-  mealType String
+  mealType MealType
   quantity Float    // in grams
   calories Float
   protein  Float
