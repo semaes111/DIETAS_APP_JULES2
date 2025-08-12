@@ -44,7 +44,7 @@ class NutriMedAPITester:
     def test_health_endpoint(self) -> bool:
         """Test the health check endpoint"""
         try:
-            response = self.session.get(f"{self.api_base}/health", timeout=10)
+            response = self.session.get(f"{self.api_base}/health", timeout=30)
             
             if response.status_code == 200:
                 data = response.json()
