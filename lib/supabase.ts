@@ -1,43 +1,31 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase environment variables")
+  throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+})
 
-export const createServerClient = () => {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-  return createClient(supabaseUrl, serviceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  })
+// Helper function to get user session
+export async function getSession() {
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error) {
+    console.error('Error getting session:', error)
+    return null
+  }
+  return session
 }
 
-// Admin client with service role key
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
-
-// Error handling utility
-export function handleSupabaseError(error: any): string {
-  if (error?.message) {
-    return error.message
-  }
-  if (typeof error === 'string') {
-    return error
-  }
-  return 'An unexpected error occurred'
+// Helper function to get current user
+export async function getCurrentUser() {
+  const session = await getSession()
+  return session?.user || null
 }

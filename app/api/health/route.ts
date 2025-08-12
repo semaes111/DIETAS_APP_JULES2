@@ -1,138 +1,76 @@
-/**
- * Health Check API Route for Supabase Deployment
- * Verifies database connectivity and application status
- */
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { supabase } from '@/lib/supabase'
-import { Cache } from '@/lib/cache'
-
-export async function GET(request: NextRequest) {
+export async function GET() {
   const startTime = Date.now()
   
   try {
-    // 1. Check database connection via Prisma
-    const dbCheck = await Promise.race([
-      prisma.$queryRaw`SELECT 1 as connected`,
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database timeout')), 5000)
-      )
-    ])
-
-    // 2. Check Supabase connection
-    const supabaseCheck = await supabase.from('users').select('count').limit(1)
+    const supabase = createRouteHandlerClient({ cookies })
     
-    // 3. Check cache
-    let cacheCheck = false
+    // Test database connection
+    let databaseConnected = false
+    let supabaseConnected = false
+    let error = null
+    
     try {
-      const testKey = 'health-check-test'
-      Cache.set(testKey, 'test-value', 10)
-      const value = Cache.get(testKey)
-      Cache.delete(testKey)
-      cacheCheck = value === 'test-value'
-    } catch (error) {
-      console.warn('Cache check failed:', error)
-    }
-    
-    // 4. Get basic system info
-    const responseTime = Date.now() - startTime
-    const memoryUsage = process.memoryUsage()
-    
-    // 5. Environment check
-    const envCheck = {
-      hasDatabase: !!process.env.DATABASE_URL,
-      hasSupabase: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasAuth: !!process.env.NEXTAUTH_SECRET,
-      nodeEnv: process.env.NODE_ENV,
-      databaseProvider: process.env.DATABASE_PROVIDER
-    }
-
-    // 6. Get database stats (if accessible)
-    let dbStats = null
-    try {
-      const userCount = await prisma.user.count()
-      const foodCount = await prisma.food.count()
-      const mealCount = await prisma.userMeal.count()
+      // Simple query to test connection
+      const { data, error: dbError } = await supabase
+        .from('foods')
+        .select('count(*)')
+        .limit(1)
       
-      dbStats = {
-        users: userCount,
-        foods: foodCount,
-        meals: mealCount
+      if (!dbError) {
+        databaseConnected = true
+        supabaseConnected = true
+      } else {
+        error = dbError.message
       }
-    } catch (error) {
-      console.warn('Could not fetch database stats:', error)
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unknown database error'
     }
-
-    return NextResponse.json({
-      status: 'healthy',
+    
+    const responseTime = Date.now() - startTime
+    
+    const healthStatus = {
+      status: databaseConnected ? 'healthy' : 'degraded',
       timestamp: new Date().toISOString(),
-      responseTime: `${responseTime}ms`,
-      version: process.env.npm_package_version || '1.0.0',
-      environment: envCheck,
       database: {
-        connected: !!dbCheck,
-        provider: 'postgresql',
-        stats: dbStats
+        connected: databaseConnected,
+        error: error
       },
       supabase: {
-        connected: !supabaseCheck.error,
-        error: supabaseCheck.error?.message || null
-      },
-      cache: {
-        working: cacheCheck
-      },
-      memory: {
-        rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
-        heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
-        external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`
+        connected: supabaseConnected,
+        error: error
       },
       services: {
-        prisma: '✅ Connected',
-        supabase: supabaseCheck.error ? '❌ Error' : '✅ Connected',
-        nextauth: envCheck.hasAuth ? '✅ Configured' : '❌ Missing',
-        cache: cacheCheck ? '✅ Working' : '❌ Error'
-      }
-    }, { 
-      status: 200,
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    })
-
-  } catch (error) {
-    console.error('Health check failed:', error)
+        api: 'operational',
+        auth: supabaseConnected ? 'operational' : 'degraded'
+      },
+      responseTime: `${responseTime}ms`
+    }
     
-    return NextResponse.json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      responseTime: `${Date.now() - startTime}ms`,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      environment: {
-        hasDatabase: !!process.env.DATABASE_URL,
-        hasSupabase: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasAuth: !!process.env.NEXTAUTH_SECRET,
-        nodeEnv: process.env.NODE_ENV
-      }
-    }, { 
-      status: 503,
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
+    return NextResponse.json(healthStatus, { 
+      status: databaseConnected ? 200 : 503 
     })
-  }
-}
-
-// Also support HEAD requests for simple health checks
-export async function HEAD(request: NextRequest) {
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    return new Response(null, { status: 200 })
+    
   } catch (error) {
-    return new Response(null, { status: 503 })
+    return NextResponse.json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
+      supabase: {
+        connected: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
+      services: {
+        api: 'error',
+        auth: 'error'
+      },
+      responseTime: `${Date.now() - startTime}ms`
+    }, { status: 503 })
   }
 }
