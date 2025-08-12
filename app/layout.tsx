@@ -12,11 +12,7 @@ export const metadata = {
   description: 'Transforma tu alimentación con nuestro sistema inteligente basado en la dieta mediterránea',
 }
 
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-}
+
 
 export default function RootLayout({
   children,
