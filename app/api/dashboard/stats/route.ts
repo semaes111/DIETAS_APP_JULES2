@@ -1,88 +1,98 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-
-export const dynamic = 'force-dynamic'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient({ cookies })
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      )
+    // Get current user
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const userId = session.user.id
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
 
     // Get user profile for targets
-    const profile = await prisma.userProfile.findUnique({
-      where: { userId }
-    })
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
 
-    if (!profile) {
-      return NextResponse.json(
-        { message: "Profile not found" },
-        { status: 404 }
-      )
-    }
+    // Get today's meals
+    const today = new Date().toISOString().split('T')[0]
+    const { data: todayMeals } = await supabase
+      .from('user_meals')
+      .select(`
+        *,
+        foods (*)
+      `)
+      .eq('user_id', userId)
+      .eq('date', today)
 
-    // Get today's consumed nutrition
-    const todaysMeals = await prisma.userMeal.findMany({
-      where: {
-        userId,
-        date: {
-          gte: today,
-          lt: tomorrow
+    // Calculate consumed values
+    const consumed = todayMeals?.reduce((acc, meal) => ({
+      calories: acc.calories + meal.calories,
+      protein: acc.protein + meal.protein,
+      carbs: acc.carbs + meal.carbs,
+      fat: acc.fat + meal.fat
+    }), { calories: 0, protein: 0, carbs: 0, fat: 0 }) || { calories: 0, protein: 0, carbs: 0, fat: 0 }
+
+    // Get current weight from latest progress log
+    const { data: latestProgress } = await supabase
+      .from('progress_logs')
+      .select('weight')
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .limit(1)
+      .single()
+
+    // Calculate streak (simplified - count consecutive days with meals)
+    const { data: mealDays } = await supabase
+      .from('user_meals')
+      .select('date')
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .limit(30)
+
+    let streakDays = 0
+    if (mealDays && mealDays.length > 0) {
+      const uniqueDays = [...new Set(mealDays.map(m => m.date))]
+      let currentDate = new Date()
+      
+      for (const dayStr of uniqueDays) {
+        const dayDate = new Date(dayStr)
+        const diffTime = Math.abs(currentDate.getTime() - dayDate.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        if (diffDays <= streakDays + 1) {
+          streakDays++
+          currentDate = dayDate
+        } else {
+          break
         }
       }
-    })
-
-    const consumedCalories = todaysMeals.reduce((sum, meal) => sum + meal.calories, 0)
-    const consumedProtein = todaysMeals.reduce((sum, meal) => sum + meal.protein, 0)
-    const consumedCarbs = todaysMeals.reduce((sum, meal) => sum + meal.carbs, 0)
-    const consumedFat = todaysMeals.reduce((sum, meal) => sum + meal.fat, 0)
-
-    // Calculate streak (simplified - just return a demo value for now)
-    const streakDays = 7
-
-    // Get latest weight
-    const latestProgress = await prisma.progressLog.findFirst({
-      where: { userId },
-      orderBy: { date: 'desc' },
-      select: { weight: true }
-    })
-
-    const currentWeight = latestProgress?.weight || profile.weight
+    }
 
     const stats = {
-      targetCalories: profile.targetCalories || 2000,
-      consumedCalories: Math.round(consumedCalories),
-      targetProtein: profile.targetProtein || 150,
-      consumedProtein: Math.round(consumedProtein),
-      targetCarbs: profile.targetCarbs || 200,
-      consumedCarbs: Math.round(consumedCarbs),
-      targetFat: profile.targetFat || 67,
-      consumedFat: Math.round(consumedFat),
-      currentWeight,
-      goalWeight: profile.goal === 'LOSE' ? (profile.weight || 70) - 5 : 
-                   profile.goal === 'GAIN' ? (profile.weight || 70) + 5 : (profile.weight || 70),
+      targetCalories: profile?.target_calories || 2000,
+      consumedCalories: Math.round(consumed.calories),
+      targetProtein: profile?.target_protein || 150,
+      consumedProtein: Math.round(consumed.protein),
+      targetCarbs: profile?.target_carbs || 200,
+      consumedCarbs: Math.round(consumed.carbs),
+      targetFat: profile?.target_fat || 67,
+      consumedFat: Math.round(consumed.fat),
+      currentWeight: latestProgress?.weight || 75,
+      goalWeight: profile?.goal === 'LOSE' ? 70 : profile?.goal === 'GAIN' ? 80 : 75,
       streakDays
     }
 
-    return NextResponse.json(stats, { status: 200 })
+    return NextResponse.json(stats)
   } catch (error) {
-    console.error("Dashboard stats error:", error)
-    return NextResponse.json(
-      { message: "Internal server error" },
-      { status: 500 }
-    )
+    console.error('Error fetching dashboard stats:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
