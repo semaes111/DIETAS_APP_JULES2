@@ -17,7 +17,7 @@ export async function GET() {
       // Simple query to test connection
       const { data, error: dbError } = await supabase
         .from('foods')
-        .select('count(*)')
+        .select('id')
         .limit(1)
       
       if (!dbError) {
