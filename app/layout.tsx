@@ -7,32 +7,9 @@ import { AuthProvider } from "@/components/auth-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
-export const metadata: Metadata = {
-  title: "Dietas NutriMed - Gestión Nutricional Personalizada",
-  description: "Aplicación completa para la gestión de dietas y nutrición personalizada con seguimiento mediterráneo",
-  keywords: "dietas, nutrición, salud, mediterránea, personalizada, BMR, calorías",
-  authors: [{ name: "Dietas NutriMed Team" }],
-  creator: "Dietas NutriMed",
-  publisher: "Dietas NutriMed",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
-  openGraph: {
-    title: "Dietas NutriMed",
-    description: "Gestión nutricional personalizada con principios mediterráneos",
-    url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-    siteName: "Dietas NutriMed",
-    locale: "es_ES",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Dietas NutriMed",
-    description: "Gestión nutricional personalizada",
-  },
+export const metadata = {
+  title: 'Dietas NutriMed - Tu Compañero Nutricional',
+  description: 'Transforma tu alimentación con nuestro sistema inteligente basado en la dieta mediterránea',
 }
 
 export const viewport = {
