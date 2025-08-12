@@ -10,8 +10,6 @@ export const metadata = {
   description: 'Transforma tu alimentación con nuestro sistema inteligente basado en la dieta mediterránea',
 }
 
-
-
 export default function RootLayout({
   children,
 }: {
