@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 
 // Create providers array conditionally based on environment variables
 const providers: any[] = []
@@ -73,9 +74,12 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // 24 hours
   },
   pages: {
     signIn: "/auth/signin",
+    error: "/auth/error",
   },
   providers,
   callbacks: {
@@ -87,12 +91,51 @@ export const authOptions: NextAuthOptions = {
         session.user.image = token.picture as string
         session.user.profile = token.profile as any
         session.user.isAdmin = token.isAdmin as boolean
+        
+        // Add Supabase access token if needed for direct Supabase operations
+        if (token.sub) {
+          try {
+            // Generate Supabase JWT for the user
+            const supabaseToken = await supabaseAdmin.auth.admin.generateLink({
+              type: 'magiclink',
+              email: token.email as string,
+              options: {
+                redirectTo: process.env.NEXTAUTH_URL,
+              }
+            });
+            
+            session.supabaseAccessToken = supabaseToken.data.hashed_token;
+          } catch (error) {
+            console.error('Error generating Supabase token:', error);
+          }
+        }
       }
 
       return session
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       try {
+        // Handle initial sign in
+        if (user) {
+          token.id = user.id
+        }
+        
+        // Handle OAuth sign in
+        if (account?.provider === 'google') {
+          // Create or update user in Supabase through Prisma
+          const existingUser = await prisma.user.findUnique({
+            where: { email: token.email! },
+            include: { profile: true }
+          });
+          
+          if (existingUser) {
+            token.id = existingUser.id;
+            token.profile = existingUser.profile;
+            token.isAdmin = existingUser.isAdmin;
+          }
+        }
+
+        // Fetch user data for JWT
         const dbUser = await prisma.user.findFirst({
           where: {
             email: token.email!,
@@ -110,6 +153,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         return {
+          ...token,
           id: dbUser.id,
           name: dbUser.name,
           email: dbUser.email,
@@ -125,5 +169,54 @@ export const authOptions: NextAuthOptions = {
         return token
       }
     },
+    async signIn({ user, account, profile }) {
+      try {
+        // Allow credentials sign in
+        if (account?.provider === 'credentials') {
+          return true;
+        }
+        
+        // Handle OAuth providers (Google)
+        if (account?.provider === 'google' && profile?.email) {
+          // Check if user exists
+          const existingUser = await prisma.user.findUnique({
+            where: { email: profile.email }
+          });
+          
+          if (existingUser) {
+            return true;
+          }
+          
+          // Create new user if doesn't exist
+          await prisma.user.create({
+            data: {
+              email: profile.email,
+              name: profile.name || null,
+              image: (profile as any).picture || null,
+              emailVerified: new Date(),
+            }
+          });
+          
+          return true;
+        }
+        
+        return false;
+      } catch (error) {
+        console.error('Sign in error:', error);
+        return false;
+      }
+    }
   },
+  events: {
+    async createUser({ user }) {
+      console.log('New user created:', user.email);
+    },
+    async signIn({ user, account, profile }) {
+      console.log('User signed in:', user.email, 'via', account?.provider);
+    },
+    async signOut({ session }) {
+      console.log('User signed out:', session?.user?.email);
+    }
+  },
+  debug: process.env.NODE_ENV === 'development',
 }

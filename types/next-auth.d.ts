@@ -8,9 +8,18 @@ declare module "next-auth" {
       profile?: UserProfile | null
       isAdmin?: boolean
     } & DefaultSession["user"]
+    supabaseAccessToken?: string
   }
 
   interface User {
+    id: string
+    profile?: UserProfile | null
+    isAdmin?: boolean
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
     id: string
     profile?: UserProfile | null
     isAdmin?: boolean

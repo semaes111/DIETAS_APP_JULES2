@@ -9,6 +9,25 @@ This guide will walk you through deploying the DIETAS-APP to Vercel with a Postg
 - A Vercel account
 - A PostgreSQL database (Vercel Postgres, Supabase, Railway, etc.)
 
+## ✅ Recent Deployment Fixes Applied
+
+This repository has been optimized for Vercel deployment with the following fixes:
+
+### 🔧 Technical Fixes Applied
+- **Fixed viewport metadata export** in root layout for Next.js 14 compatibility
+- **Added force-dynamic exports** to all API routes requiring server-side execution
+- **Optimized Next.js configuration** with standalone output and improved webpack settings
+- **Fixed server/client-side rendering issues** with proper 'use client' directives
+- **Enhanced TypeScript configuration** with strict mode maintained
+- **Added comprehensive production environment templates**
+
+### 🚀 Build Verification
+- ✅ Local build process tested and verified
+- ✅ All API routes properly configured for dynamic server usage
+- ✅ TypeScript compilation successful with zero errors
+- ✅ No client-side code executing on server
+- ✅ Metadata configuration compliant with Next.js 14
+
 ## 🗄️ Database Setup
 
 ### Option 1: Vercel Postgres (Recommended)

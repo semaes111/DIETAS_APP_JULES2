@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "prisma generate && npm run build",
   "installCommand": "npm ci",
   "framework": "nextjs",
   "regions": ["iad1"],
@@ -15,6 +15,9 @@
     },
     "app/api/admin/**/*.ts": {
       "maxDuration": 60
+    },
+    "app/api/health/**/*.ts": {
+      "maxDuration": 10
     }
   },
   "headers": [
@@ -48,10 +51,10 @@
       ]
     }
   ],
-  "rewrites": [
+  "crons": [
     {
-      "source": "/api/health",
-      "destination": "/api/dashboard/stats"
+      "path": "/api/health",
+      "schedule": "0 */5 * * * *"
     }
   ],
   "redirects": [
