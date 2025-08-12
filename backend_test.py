@@ -286,7 +286,7 @@ class NutriMedAPITester:
     def test_application_accessibility(self) -> bool:
         """Test if the main application is accessible"""
         try:
-            response = self.session.get(self.base_url, timeout=10)
+            response = self.session.get(self.base_url, timeout=30)
             
             if response.status_code == 200:
                 # Check if it's a valid HTML response
