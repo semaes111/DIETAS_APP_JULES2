@@ -13,7 +13,7 @@ export const GET = Middleware.protected({
   const url = new URL(req.url)
   
   try {
-    const query = validateQuery(dateRangeSchema, url)
+    const query = validateQuery<any>(dateRangeSchema, url)
     const userId = context.user!.id
 
     const trend = await nutritionService.getWeeklyNutritionTrend(

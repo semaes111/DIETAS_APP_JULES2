@@ -22,7 +22,7 @@ export const GET = Middleware.protected({
   const url = new URL(req.url)
   
   try {
-    const query = validateQuery(recommendationsQuerySchema, url)
+    const query = validateQuery<any>(recommendationsQuerySchema, url)
     const userId = context.user!.id
 
     // Get user profile for nutrition targets

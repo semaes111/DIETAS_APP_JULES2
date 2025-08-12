@@ -24,7 +24,7 @@ const shoppingListService = new ShoppingListService()
 export const POST = Middleware.protected({
   validation: generateShoppingListSchema,
 })(async (req: NextRequest, context) => {
-  const body = await validateBody(generateShoppingListSchema)(req)
+  const body = await validateBody<any>(generateShoppingListSchema)(req)
   const userId = context.user!.id
 
   try {

@@ -4,7 +4,6 @@ import { UserDataExportService } from "@/lib/import-export-service"
 
 // GET /api/users/export - Export user's own data (GDPR)
 export const GET = Middleware.protected({
-  rateLimit: 'strict', // Strict rate limiting for data export
 })(async (req: NextRequest, context) => {
   const userId = context.user!.id
 

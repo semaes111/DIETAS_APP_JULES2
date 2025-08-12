@@ -14,10 +14,9 @@ const mealPlanningService = new MealPlanningService()
 
 // POST /api/meal-plans/generate - Generate weekly meal plan
 export const POST = Middleware.protected({
-  validation: mealPlanGenerateSchema,
-  rateLimit: 'general'
+  validation: mealPlanGenerateSchema
 })(async (req: NextRequest, context) => {
-  const body = await validateBody(mealPlanGenerateSchema)(req)
+  const body = await validateBody<any>(mealPlanGenerateSchema)(req)
   const userId = context.user!.id
 
   try {

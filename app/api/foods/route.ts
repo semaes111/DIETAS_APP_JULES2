@@ -14,7 +14,7 @@ export const GET = Middleware.protected({
   const url = new URL(req.url)
   
   try {
-    const query = validateQuery(foodSearchSchema, url)
+    const query = validateQuery<any>(foodSearchSchema, url)
     
     // Create cache key for this search
     const cacheKey = CacheKeys.foodSearch(query.search || '', query.category)
@@ -71,7 +71,7 @@ export const POST = Middleware.protected({
   // Check if user has permission to create foods
   requirePermission(Permission.CREATE_FOODS)(context.user!)
   
-  const body = await validateBody(foodSchema)(req)
+  const body = await validateBody<any>(foodSchema)(req)
 
   try {
     // Check for duplicate barcode if provided

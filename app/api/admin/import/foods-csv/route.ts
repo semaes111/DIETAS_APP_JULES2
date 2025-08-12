@@ -12,7 +12,7 @@ const importFoodsSchema = z.object({
 
 // POST /api/admin/import/foods-csv - Import foods from CSV
 export const POST = RequirePermission.importData(async (req: NextRequest, context) => {
-  const body = await validateBody(importFoodsSchema)(req)
+  const body = await validateBody<z.infer<typeof importFoodsSchema>>(importFoodsSchema)(req)
   const userId = context.user!.id
 
   try {

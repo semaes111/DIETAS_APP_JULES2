@@ -18,7 +18,7 @@ export const GET = Middleware.protected({
   const url = new URL(req.url)
   
   try {
-    const query = validateQuery(shoppingListQuerySchema, url)
+    const query = validateQuery<any>(shoppingListQuerySchema, url)
     const userId = context.user!.id
 
     let data

@@ -22,7 +22,7 @@ export const GET = RequirePermission.exportData(async (req: NextRequest, context
   const url = new URL(req.url)
   
   try {
-    const query = validateQuery(exportFoodsSchema, url)
+    const query = validateQuery<z.infer<typeof exportFoodsSchema>>(exportFoodsSchema, url)
 
     const csvData = await FoodImportExportService.exportToCSV({
       format: 'csv',

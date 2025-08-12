@@ -4,9 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { CacheKeys } from "@/lib/cache"
 
 // GET /api/admin/system/stats - Detailed system statistics
-export const GET = RequirePermission.viewAnalytics({
-  cache: { key: 'admin:system:stats', ttl: 300 } // 5 minutes cache
-})(async (req: NextRequest, context) => {
+export const GET = RequirePermission.viewAnalytics(async (req: NextRequest, context) => {
   try {
     const now = new Date()
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000)
